@@ -193,13 +193,13 @@ class Worker:
 
     def _answers_to_remember(self) -> Mapping:
         """Get only answers that will be remembered in the copier answers file."""
-        # All internal values must appear first
-        answers: AnyByStrDict = {}
         commit = self.template.commit
         src = self.template.url
-        for key, value in (("_commit", commit), ("_src_path", src)):
-            if value is not None:
-                answers[key] = value
+        answers: AnyByStrDict = {
+            key: value
+            for key, value in (("_commit", commit), ("_src_path", src))
+            if value is not None
+        }
         # Other data goes next
         answers.update(
             (str(k), v)
@@ -628,9 +628,7 @@ class Worker:
 
         Otherwise, execute [run_update][copier.main.Worker.run_update].
         """
-        if self.src_path:
-            return self.run_copy()
-        return self.run_update()
+        return self.run_copy() if self.src_path else self.run_update()
 
     def run_copy(self) -> None:
         """Generate a subproject from zero, ignoring what was in the folder.
@@ -708,11 +706,11 @@ class Worker:
 
     def _apply_update(self):
         # Copy old template into a temporary destination
-        with TemporaryDirectory(
-            prefix=f"{__name__}.update_diff."
-        ) as old_copy, TemporaryDirectory(
-            prefix=f"{__name__}.recopy_diff."
-        ) as new_copy:
+        with (TemporaryDirectory(
+                prefix=f"{__name__}.update_diff."
+            ) as old_copy, TemporaryDirectory(
+                prefix=f"{__name__}.recopy_diff."
+            ) as new_copy):
             old_worker = self._make_old_worker(old_copy)
             old_worker.run_copy()
             recopy_worker = replace(
@@ -734,7 +732,7 @@ class Worker:
                     "--show-toplevel",
                 ).strip()
                 self._git_initialize_repo()
-                git("remote", "add", "real_dst", "file://" + subproject_top)
+                git("remote", "add", "real_dst", f"file://{subproject_top}")
                 git("fetch", "--depth=1", "real_dst", "HEAD")
                 diff_cmd = git["diff-tree", "--unified=1", "HEAD...FETCH_HEAD"]
                 try:
@@ -806,7 +804,7 @@ class Worker:
 
     def _make_old_worker(self, old_copy):
         """Create a worker to copy the old template into a temporary destination."""
-        old_worker = replace(
+        return replace(
             self,
             dst_path=old_copy,
             data=self.subproject.last_answers,
@@ -815,7 +813,6 @@ class Worker:
             src_path=self.subproject.template.url,
             vcs_ref=self.subproject.template.commit,
         )
-        return old_worker
 
     def _git_initialize_repo(self):
         """Initialize a git repository in the current directory."""

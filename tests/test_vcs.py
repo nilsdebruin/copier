@@ -92,10 +92,10 @@ def test_shallow_clone(tmp_path, recwarn):
 
     if vcs.GIT_VERSION >= Version("2.27"):
         with pytest.warns(errors.ShallowCloneWarning):
-            local_tmp = vcs.clone(str(src_path))
+            local_tmp = vcs.clone(src_path)
     else:
         assert len(recwarn) == 0
-        local_tmp = vcs.clone(str(src_path))
+        local_tmp = vcs.clone(src_path)
         assert len(recwarn) == 0
     assert local_tmp
     assert exists(join(local_tmp, "README.md"))
