@@ -205,8 +205,7 @@ class Template:
     use_prereleases: bool = False
 
     def _cleanup(self) -> None:
-        temp_clone = self._temp_clone
-        if temp_clone:
+        if temp_clone := self._temp_clone:
             rmtree(
                 temp_clone,
                 ignore_errors=False,
@@ -219,9 +218,7 @@ class Template:
         original_path = Path(self.url).expanduser()
         with suppress(OSError):  # triggered for URLs on Windows
             original_path = original_path.resolve()
-        if clone_path != original_path:
-            return clone_path
-        return None
+        return clone_path if clone_path != original_path else None
 
     @cached_property
     def _raw_config(self) -> AnyByStrDict:
@@ -343,7 +340,7 @@ class Template:
             from_template: Original template, from which we are migrating.
         """
         result: List[Task] = []
-        if not (self.version and from_template.version):
+        if not self.version or not from_template.version:
             return result
         extra_env: Env = {
             "STAGE": stage,
@@ -361,8 +358,10 @@ class Template:
                     "VERSION_CURRENT": migration["version"],
                     "VERSION_PEP440_CURRENT": str(current),
                 }
-                for cmd in migration.get(stage, []):
-                    result.append(Task(cmd=cmd, extra_env=extra_env))
+                result.extend(
+                    Task(cmd=cmd, extra_env=extra_env)
+                    for cmd in migration.get(stage, [])
+                )
         return result
 
     @cached_property
@@ -438,9 +437,7 @@ class Template:
         See [templates_suffix][].
         """
         result = self.config_data.get("templates_suffix")
-        if result is None:
-            return DEFAULT_TEMPLATES_SUFFIX
-        return result
+        return DEFAULT_TEMPLATES_SUFFIX if result is None else result
 
     @cached_property
     def local_abspath(self) -> Path:
